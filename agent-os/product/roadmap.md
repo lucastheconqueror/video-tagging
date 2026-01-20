@@ -10,9 +10,9 @@
 
 5. [x] **Synology NAS Integration** — Implement SSH/SFTP connection to Synology NAS, list videos matching pattern `V - *a{id}.mp4`, and download selected videos. `S`
 
-6. [ ] **RunPod S3 Sync** — Implement S3 upload to RunPod bucket and verification that files are accessible on the RunPod volume. `S`
+6. [x] **RunPod S3 Sync** — Implement S3 upload to RunPod bucket and verification that files are accessible on the RunPod volume. `S`
 
-7. [ ] **RunPod vLLM Orchestration** — SSH into RunPod, trigger vLLM inference on synced videos, and retrieve JSON results. `M`
+7. [x] **RunPod vLLM Orchestration** — SSH into RunPod, trigger vLLM inference on synced videos, and retrieve JSON results. `M`
 
 8. [ ] **End-to-End Pipeline with Confirmations** — Wire all components together with TUI confirmation steps: video selection → S3 sync confirm → LLM output review → Airtable update confirm. `M`
 

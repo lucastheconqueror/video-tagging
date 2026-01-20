@@ -14,12 +14,13 @@ class MainMenuScreen(Screen):
     BINDINGS = [
         Binding("j", "cursor_down", "Down", show=False),
         Binding("k", "cursor_up", "Up", show=False),
-        Binding("enter", "select", "Select", show=True),
+        Binding("enter", "select", "Select", show=False),
         Binding("l", "select", "Select", show=False),
-        Binding("p", "process_local", "Process Local", show=True),
-        Binding("s", "browse_synology", "Synology", show=True),
-        Binding("v", "validate_config", "Validate Config", show=True),
-        Binding("q", "quit", "Quit", show=True),
+        Binding("p", "process_local", "Local", show=False),
+        Binding("s", "browse_synology", "Synology", show=False),
+        Binding("r", "runpod_process", "RunPod", show=False),
+        Binding("v", "validate_config", "Config", show=False),
+        Binding("q", "quit", "Quit", show=False),
     ]
 
     def compose(self) -> ComposeResult:
@@ -29,15 +30,16 @@ class MainMenuScreen(Screen):
             yield Static("Video Content Tagging Pipeline", classes="subtitle")
 
             yield OptionList(
-                Option("[p] Process Local Video", id="local-video"),
-                Option("[s] Browse Synology NAS", id="synology"),
-                Option("[v] Validate Configuration", id="validate-config"),
-                Option("[q] Quit", id="quit"),
+                Option("(p) Process Local Video", id="local-video"),
+                Option("(s) Browse Synology NAS", id="synology"),
+                Option("(r) Process on RunPod S3", id="runpod"),
+                Option("(v) Validate Configuration", id="validate-config"),
+                Option("(q) Quit", id="quit"),
                 id="menu-list",
             )
 
             yield Static(
-                "Navigate: [j/k] | Select: [Enter] | Direct: [p/s/v/q]",
+                "j/k Navigate | p Local | s Synology | r RunPod | v Config | q Quit",
                 classes="help-text",
             )
 
@@ -73,6 +75,10 @@ class MainMenuScreen(Screen):
         """Direct shortcut to browse Synology."""
         self._handle_selection("synology")
 
+    def action_runpod_process(self) -> None:
+        """Direct shortcut to RunPod processing."""
+        self._handle_selection("runpod")
+
     def action_quit(self) -> None:
         """Quit the application."""
         self.app.exit()
@@ -92,6 +98,11 @@ class MainMenuScreen(Screen):
             from videotagger.tui.screens.synology_browser import SynologyBrowserScreen
 
             self.app.push_screen(SynologyBrowserScreen())
+
+        elif option_id == "runpod":
+            from videotagger.tui.screens.runpod_process import RunPodProcessScreen
+
+            self.app.push_screen(RunPodProcessScreen())
 
         elif option_id == "validate-config":
             self._validate_config()

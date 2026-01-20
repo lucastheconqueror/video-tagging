@@ -2,7 +2,7 @@
 
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.widgets import Footer, Header
+from textual.widgets import Header
 
 from videotagger.tui.screens.main_menu import MainMenuScreen
 
@@ -17,6 +17,7 @@ class VideoTaggerApp(App):
     Screen {
         align: center middle;
     }
+
 
     #main-container {
         width: 90%;
@@ -44,16 +45,44 @@ class VideoTaggerApp(App):
         padding: 1 0;
     }
 
-    #menu-list {
+    OptionList {
         width: 100%;
         height: auto;
         max-height: 20;
         border: solid $primary;
         padding: 0;
+        background: $surface;
     }
 
-    #menu-list > .option-list--option {
+    OptionList > .option-list--option {
         padding: 0 2;
+        text-style: none;
+        background: transparent;
+    }
+
+    OptionList > .option-list--option-disabled {
+        text-style: none;
+        color: $text-muted;
+    }
+
+    OptionList:focus > .option-list--option-highlighted {
+        background: $accent;
+        color: $text;
+        text-style: bold;
+    }
+
+    OptionList > .option-list--option-hover {
+        background: $surface-lighten-1;
+        text-style: none;
+    }
+
+    #video-list {
+        height: 1fr;
+        max-height: 30;
+    }
+
+    #menu-list {
+        max-height: 10;
     }
 
     #json-preview {
@@ -86,14 +115,13 @@ class VideoTaggerApp(App):
     """
 
     BINDINGS = [
-        Binding("q", "quit", "Quit", show=True),
-        Binding("escape", "back", "Back", show=True),
+        Binding("q", "quit", "Quit", show=False),
+        Binding("escape", "back", "Back", show=False),
     ]
 
     def compose(self) -> ComposeResult:
         """Compose the app layout."""
         yield Header()
-        yield Footer()
 
     def on_mount(self) -> None:
         """Handle app mount."""

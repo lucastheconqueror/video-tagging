@@ -19,11 +19,11 @@ class JSONPreviewScreen(Screen):
     """Screen for previewing and confirming extracted tags."""
 
     BINDINGS = [
-        Binding("y", "confirm", "Update Airtable", show=True),
-        Binding("w", "save_sidecar", "Save Sidecar Only", show=True),
-        Binding("n", "skip", "Skip", show=True),
+        Binding("y", "confirm", "Update Airtable", show=False),
+        Binding("w", "save_sidecar", "Save Sidecar Only", show=False),
+        Binding("n", "skip", "Skip", show=False),
         Binding("s", "skip", "Skip", show=False),
-        Binding("escape", "menu", "Back to Menu", show=True),
+        Binding("escape", "menu", "Back to Menu", show=False),
         Binding("q", "menu", "Back to Menu", show=False),
     ]
 

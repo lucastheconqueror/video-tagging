@@ -16,11 +16,12 @@ class SynologyBrowserScreen(Screen):
     BINDINGS = [
         Binding("j", "cursor_down", "Down", show=False),
         Binding("k", "cursor_up", "Up", show=False),
-        Binding("enter", "select", "Download & Process", show=True),
-        Binding("space", "toggle", "Toggle Select", show=True),
-        Binding("a", "select_all", "Select All", show=True),
-        Binding("escape", "back", "Back", show=True),
-        Binding("r", "refresh", "Refresh (clear cache)", show=True),
+        Binding("enter", "select", "Process Locally", show=False),
+        Binding("u", "sync_s3", "Upload to S3", show=False),
+        Binding("space", "toggle", "Toggle", show=False),
+        Binding("a", "select_all", "All", show=False),
+        Binding("escape", "back", "Back", show=False),
+        Binding("r", "refresh", "Refresh", show=False),
     ]
 
     def __init__(self) -> None:
@@ -36,7 +37,7 @@ class SynologyBrowserScreen(Screen):
             yield LoadingIndicator(id="loader")
             yield OptionList(id="video-list")
             yield Static(
-                "[j/k] Navigate | [Space] Toggle | [a] All | [Enter] Process | [r] Refresh",
+                "Space Toggle | a All | Enter Process | u S3 Upload | r Refresh | Esc Back",
                 classes="help-text",
             )
 
@@ -212,6 +213,23 @@ class SynologyBrowserScreen(Screen):
         """Go back to menu."""
         self.app.pop_screen()
 
+    def action_sync_s3(self) -> None:
+        """Sync selected videos to RunPod S3."""
+        if not self.selected:
+            video_list = self.query_one("#video-list", OptionList)
+            if video_list.highlighted is not None:
+                self.selected.add(video_list.highlighted)
+
+        if not self.selected:
+            self.app.notify("No videos selected", severity="warning")
+            return
+
+        selected_videos = [self.videos[i] for i in sorted(self.selected)]
+
+        from videotagger.tui.screens.runpod_sync import RunPodSyncScreen
+
+        self.app.push_screen(RunPodSyncScreen(selected_videos))
+
     def action_refresh(self) -> None:
         """Refresh the video list (clears cache)."""
         self.selected.clear()
@@ -226,7 +244,7 @@ class SynologyDownloadScreen(Screen):
     """Screen for downloading and processing selected videos."""
 
     BINDINGS = [
-        Binding("ctrl+c", "cancel", "Cancel", show=True),
+        Binding("ctrl+c", "cancel", "Cancel", show=False),
     ]
 
     def __init__(self, videos: list) -> None:
@@ -246,7 +264,7 @@ class SynologyDownloadScreen(Screen):
             )
             yield LoadingIndicator()
             yield Static("", id="current-file", classes="help-text")
-            yield Static("[Ctrl+C] Cancel", classes="help-text")
+            yield Static("Ctrl+C Cancel", classes="help-text")
 
     def on_mount(self) -> None:
         """Start downloading."""

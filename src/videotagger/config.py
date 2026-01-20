@@ -64,6 +64,14 @@ class RunPodSSHConfig(BaseSettings):
         return path
 
 
+class RunPodAPIConfig(BaseSettings):
+    """RunPod API configuration."""
+
+    model_config = SettingsConfigDict(env_prefix="RUNPOD_")
+
+    api_key: str = Field(..., description="RunPod API key")
+
+
 class LLMConfig(BaseSettings):
     """LLM (vLLM) configuration for video analysis."""
 
@@ -102,6 +110,7 @@ class Settings(BaseSettings):
     airtable: AirtableConfig = Field(default_factory=AirtableConfig)
     runpod_s3: RunPodS3Config = Field(default_factory=RunPodS3Config)
     runpod_ssh: RunPodSSHConfig = Field(default_factory=RunPodSSHConfig)
+    runpod_api: RunPodAPIConfig = Field(default_factory=RunPodAPIConfig)
     llm: LLMConfig = Field(default_factory=LLMConfig)
 
 

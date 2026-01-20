@@ -15,8 +15,8 @@ class LocalVideoScreen(Screen):
     """Screen for processing a local video file."""
 
     BINDINGS = [
-        Binding("escape", "back", "Back", show=True),
-        Binding("enter", "submit", "Process", show=True),
+        Binding("escape", "back", "Back", show=False),
+        Binding("enter", "submit", "Process", show=False),
         Binding("ctrl+c", "back", "Cancel", show=False),
     ]
 
@@ -82,9 +82,9 @@ class SidecarWarningScreen(Screen):
     """Warning screen when video has already been processed."""
 
     BINDINGS = [
-        Binding("y", "proceed", "Proceed & Overwrite", show=True),
-        Binding("n", "cancel", "Cancel", show=True),
-        Binding("v", "view", "View Existing", show=True),
+        Binding("y", "proceed", "Proceed & Overwrite", show=False),
+        Binding("n", "cancel", "Cancel", show=False),
+        Binding("v", "view", "View Existing", show=False),
         Binding("escape", "cancel", "Cancel", show=False),
     ]
 
@@ -137,7 +137,7 @@ class ProcessingScreen(Screen):
     """Screen shown while processing video."""
 
     BINDINGS = [
-        Binding("ctrl+c", "cancel", "Cancel", show=True),
+        Binding("ctrl+c", "cancel", "Cancel", show=False),
     ]
 
     def __init__(self, video_path: str) -> None:
