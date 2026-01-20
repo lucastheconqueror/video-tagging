@@ -1,0 +1,186 @@
+"""LLM client for video analysis using vision-language models."""
+
+import json
+import logging
+from typing import Any
+
+from openai import OpenAI
+
+from videotagger.config import LLMConfig, get_settings
+from videotagger.exceptions import LLMError
+
+# Configure logger
+logger = logging.getLogger(__name__)
+
+# System prompt for video tagging
+SYSTEM_PROMPT = (
+    "You are a video content tagger. Your job is to extract metadata from video frames. "
+    "You must output ONLY valid JSON text. Do not use Markdown code blocks. "
+    "Do not explain your answer."
+)
+
+# User prompt template
+USER_PROMPT = """Analyze this TikTok video and extract the following visual data into JSON format:
+
+1. location: The specific setting (e.g., "Gym", "Bedroom", "Supermarket", "Street").
+2. brand_objects: A list of physical items with visible logos or unique branding.
+3. visual_text: A list of significant text read from the screen. Ignore standard UI.
+4. mood: One word describing the visual atmosphere (e.g., "Chaotic", "Aesthetic").
+5. excitement: "Low", "Medium", or "High" based on movement and pacing.
+
+Output Structure:
+{
+  "location": "string",
+  "brand_objects": ["string", "string"],
+  "visual_text": ["string", "string"],
+  "mood": "string",
+  "excitement": "string"
+}"""
+
+
+def get_llm_client(config: LLMConfig | None = None) -> OpenAI:
+    """Get configured OpenAI client for vLLM.
+
+    Args:
+        config: Optional LLMConfig. If None, loads from Settings.
+
+    Returns:
+        Configured OpenAI client.
+    """
+    if config is None:
+        config = get_settings().llm
+
+    return OpenAI(
+        base_url=config.endpoint,
+        api_key=config.api_key,
+    )
+
+
+def build_vision_messages(frames_base64: list[str]) -> list[dict[str, Any]]:
+    """Build messages array for vision model.
+
+    Args:
+        frames_base64: List of base64-encoded frame images.
+
+    Returns:
+        Messages array for OpenAI chat completion.
+    """
+    # Build content array with text and images
+    content: list[dict[str, Any]] = [{"type": "text", "text": USER_PROMPT}]
+
+    for frame_b64 in frames_base64:
+        content.append(
+            {
+                "type": "image_url",
+                "image_url": {
+                    "url": f"data:image/jpeg;base64,{frame_b64}",
+                },
+            }
+        )
+
+    return [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": content},
+    ]
+
+
+def parse_tags_response(response_text: str) -> dict[str, Any]:
+    """Parse and validate the LLM response as JSON.
+
+    Args:
+        response_text: Raw text response from the LLM.
+
+    Returns:
+        Parsed tags dictionary.
+
+    Raises:
+        LLMError: If response is not valid JSON or missing required fields.
+    """
+    # Clean up response (remove potential markdown code blocks)
+    text = response_text.strip()
+    if text.startswith("```"):
+        lines = text.split("\n")
+        # Remove first and last lines if they're code block markers
+        if lines[0].startswith("```"):
+            lines = lines[1:]
+        if lines and lines[-1].strip() == "```":
+            lines = lines[:-1]
+        text = "\n".join(lines)
+
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError as e:
+        raise LLMError(f"Failed to parse LLM response as JSON: {e}", e) from e
+
+    # Validate required fields
+    required_fields = ["location", "brand_objects", "visual_text", "mood", "excitement"]
+    missing = [f for f in required_fields if f not in data]
+
+    if missing:
+        raise LLMError(f"LLM response missing required fields: {missing}")
+
+    # Ensure list fields are lists
+    for field in ["brand_objects", "visual_text"]:
+        if not isinstance(data[field], list):
+            data[field] = [data[field]] if data[field] else []
+
+    return data
+
+
+def analyze_frames(
+    frames_base64: list[str],
+    config: LLMConfig | None = None,
+) -> dict[str, Any]:
+    """Analyze video frames using vision-language model.
+
+    Args:
+        frames_base64: List of base64-encoded frame images.
+        config: Optional LLMConfig. If None, loads from Settings.
+
+    Returns:
+        Dictionary with extracted tags.
+
+    Raises:
+        LLMError: If API call fails or response parsing fails.
+    """
+    if config is None:
+        config = get_settings().llm
+
+    logger.info(f"LLM endpoint: {config.endpoint}")
+    logger.info(f"LLM model: {config.model}")
+    logger.info(f"Number of frames: {len(frames_base64)}")
+
+    client = get_llm_client(config)
+    messages = build_vision_messages(frames_base64)
+
+    logger.debug(f"Sending request to LLM with {len(messages)} messages")
+
+    try:
+        logger.info("Making LLM API call...")
+        response = client.chat.completions.create(
+            model=config.model,
+            messages=messages,
+            max_tokens=1024,
+            temperature=0.1,
+        )
+
+        logger.info("LLM API call successful")
+        logger.debug(f"Response object: {response}")
+
+        if not response.choices:
+            logger.error("LLM returned empty response (no choices)")
+            raise LLMError("LLM returned empty response")
+
+        response_text = response.choices[0].message.content or ""
+        logger.info(f"LLM response length: {len(response_text)} chars")
+        logger.debug(f"LLM response text: {response_text[:500]}...")
+
+        result = parse_tags_response(response_text)
+        logger.info(f"Successfully parsed tags: {list(result.keys())}")
+        return result
+
+    except LLMError:
+        raise
+    except Exception as e:
+        logger.exception(f"LLM API call failed: {e}")
+        raise LLMError(f"LLM API call failed: {e}", e) from e
