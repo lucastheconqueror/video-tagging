@@ -193,8 +193,6 @@ class RunPodProcessingScreen(Screen):
 
     def _process_all(self) -> list:
         """Process all videos (runs in thread)."""
-        from videotagger.airtable import extract_art_id, update_tags
-        from videotagger.exceptions import ArtIdExtractionError, RecordNotFoundError
         from videotagger.runpod_processor import process_remote_video
 
         results = []
@@ -212,29 +210,6 @@ class RunPodProcessingScreen(Screen):
 
             try:
                 tags = process_remote_video(video)
-
-                # Try to update Airtable
-                try:
-                    art_id = extract_art_id(video.filename)
-                    update_tags(art_id, tags)
-                    self.app.call_from_thread(
-                        self.app.notify,
-                        f"Updated: {art_id}",
-                        severity="information",
-                    )
-                except ArtIdExtractionError:
-                    self.app.call_from_thread(
-                        self.app.notify,
-                        f"No Art ID in: {video.filename}",
-                        severity="warning",
-                    )
-                except RecordNotFoundError as e:
-                    self.app.call_from_thread(
-                        self.app.notify,
-                        str(e),
-                        severity="warning",
-                    )
-
                 results.append((video, tags, None))
 
             except Exception as e:
@@ -245,8 +220,8 @@ class RunPodProcessingScreen(Screen):
                 )
                 results.append((video, None, str(e)))
 
-        # Done
-        self.app.call_from_thread(self._finish_processing, len(results))
+        # Show review screen
+        self.app.call_from_thread(self._show_review, results)
         return results
 
     def _update_progress(self, index: int, status: str) -> None:
@@ -257,7 +232,8 @@ class RunPodProcessingScreen(Screen):
             progress=((index + 1) / len(self.videos)) * 100
         )
 
-    def _finish_processing(self, count: int) -> None:
-        """Finish and go back."""
-        self.app.notify(f"Completed {count} videos", severity="information")
-        self.app.pop_screen()
+    def _show_review(self, results: list) -> None:
+        """Show the batch review screen."""
+        from videotagger.tui.screens.batch_review import BatchReviewScreen
+
+        self.app.switch_screen(BatchReviewScreen(results))

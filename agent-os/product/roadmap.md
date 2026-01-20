@@ -14,9 +14,9 @@
 
 7. [x] **RunPod vLLM Orchestration** — SSH into RunPod, trigger vLLM inference on synced videos, and retrieve JSON results. `M`
 
-8. [ ] **End-to-End Pipeline with Confirmations** — Wire all components together with TUI confirmation steps: video selection → S3 sync confirm → LLM output review → Airtable update confirm. `M`
+8. [x] **End-to-End Pipeline with Confirmations** — Wire all components together with TUI confirmation steps: video selection → S3 sync confirm → LLM output review → Airtable update confirm. `M`
 
-9. [ ] **Batch Processing & Progress** — Add progress bars, batch video processing, error handling with retry, and summary report at completion. `S`
+9. [x] **Batch Processing & Progress** — Add progress bars, batch video processing, error handling with retry, and summary report at completion. `S`
 
 > Notes
 > - Items 1-4 form the MVP for local testing
