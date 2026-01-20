@@ -20,22 +20,20 @@ SYSTEM_PROMPT = (
 )
 
 # User prompt template
-USER_PROMPT = """Analyze this TikTok video and extract the following visual data into JSON format:
+USER_PROMPT = """Analyze this video for tagging. Output ONLY valid JSON.
 
-1. location: The specific setting (e.g., "Gym", "Bedroom", "Supermarket", "Street").
-2. brand_objects: A list of physical items with visible logos or unique branding.
-3. visual_text: A list of significant text read from the screen. Ignore standard UI.
-4. mood: One word describing the visual atmosphere (e.g., "Chaotic", "Aesthetic").
-5. excitement: "Low", "Medium", or "High" based on movement and pacing.
+Required fields:
+1. "setting": Physical location (e.g., "Bedroom", "Gym").
+2. "branded_items": List objects with visible branding. Format: [{"name": "Brand", "type": "product/app/franchise"}]
+3. "copyright_markers": {"trademarked_characters": [], "brand_names": [], "urls_visible": []}
+4. "key_text": List 3-5 most important text phrases (ignore full sentences).
+5. "content_type": "promotional", "tutorial", "vlog", "review", or "entertainment".
+6. "copyright_risk": "High" (trademarked IP), "Medium" (brand mentions), or "Low" (none).
 
-Output Structure:
-{
-  "location": "string",
-  "brand_objects": ["string", "string"],
-  "visual_text": ["string", "string"],
-  "mood": "string",
-  "excitement": "string"
-}"""
+Rules:
+- For "trademarked_characters", list recognizable fictional characters (e.g., "Mario", "Spiderman").
+- For "brand_names", list companies/franchises visible via text or logo.
+- For "key_text", extract only nouns/phrases that describe the value prop (e.g., "medals", "virtual challenge")."""
 
 
 def get_llm_client(config: LLMConfig | None = None) -> OpenAI:
@@ -113,16 +111,31 @@ def parse_tags_response(response_text: str) -> dict[str, Any]:
         raise LLMError(f"Failed to parse LLM response as JSON: {e}", e) from e
 
     # Validate required fields
-    required_fields = ["location", "brand_objects", "visual_text", "mood", "excitement"]
+    required_fields = ["setting", "branded_items", "copyright_markers", "key_text", "content_type", "copyright_risk"]
     missing = [f for f in required_fields if f not in data]
 
     if missing:
         raise LLMError(f"LLM response missing required fields: {missing}")
 
     # Ensure list fields are lists
-    for field in ["brand_objects", "visual_text"]:
+    for field in ["branded_items", "key_text"]:
         if not isinstance(data[field], list):
             data[field] = [data[field]] if data[field] else []
+
+    # Ensure copyright_markers is a dict with required keys
+    if not isinstance(data["copyright_markers"], dict):
+        data["copyright_markers"] = {
+            "trademarked_characters": [],
+            "brand_names": [],
+            "urls_visible": []
+        }
+    else:
+        # Ensure sub-fields are lists
+        for subfield in ["trademarked_characters", "brand_names", "urls_visible"]:
+            if subfield not in data["copyright_markers"]:
+                data["copyright_markers"][subfield] = []
+            elif not isinstance(data["copyright_markers"][subfield], list):
+                data["copyright_markers"][subfield] = []
 
     return data
 
@@ -160,8 +173,8 @@ def analyze_frames(
         response = client.chat.completions.create(
             model=config.model,
             messages=messages,
-            max_tokens=1024,
-            temperature=0.1,
+            max_tokens=2048,
+            temperature=0.3,
         )
 
         logger.info("LLM API call successful")

@@ -64,16 +64,18 @@ def validate_config() -> int:
     return 0
 
 
-def process_video_command(video_path: str) -> int:
+def process_video_command(video_path: str, debug: bool = False) -> int:
     """Process a video file and output tags as JSON.
 
     Args:
         video_path: Path to the video file.
+        debug: Enable debug logging.
 
     Returns:
         Exit code: 0 for success, 1 for errors.
     """
     load_dotenv()
+    setup_logging(debug=debug)
 
     try:
         print(f"Processing video: {video_path}")
@@ -84,14 +86,22 @@ def process_video_command(video_path: str) -> int:
 
     except VideoProcessingError as e:
         print(f"Video processing error: {e}")
+        if debug and e.video_path:
+            print(f"  Video path: {e.video_path}")
         return 1
 
     except LLMError as e:
         print(f"LLM error: {e}")
+        if debug and e.original_error:
+            print(f"  Original error: {type(e.original_error).__name__}: {e.original_error}")
         return 1
 
     except Exception as e:
         print(f"Unexpected error: {e}")
+        if debug:
+            import traceback
+
+            traceback.print_exc()
         return 1
 
 
@@ -111,27 +121,33 @@ def run_tui() -> int:
 
 def main() -> None:
     """Main CLI entry point."""
+    # Check for debug flag
+    debug = "--debug" in sys.argv or "-d" in sys.argv
+    args = [a for a in sys.argv[1:] if a not in ("--debug", "-d")]
+
     # Default to TUI if no command given
-    if len(sys.argv) < 2:
+    if len(args) < 1:
         sys.exit(run_tui())
 
-    command = sys.argv[1]
+    command = args[0]
 
     if command == "tui":
         sys.exit(run_tui())
     elif command == "validate-config":
         sys.exit(validate_config())
     elif command == "process":
-        if len(sys.argv) < 3:
-            print("Usage: python -m videotagger process <video_path>")
+        if len(args) < 2:
+            print("Usage: python -m videotagger process <video_path> [--debug]")
             sys.exit(1)
-        sys.exit(process_video_command(sys.argv[2]))
+        sys.exit(process_video_command(args[1], debug=debug))
     elif command in ["--help", "-h"]:
-        print("Usage: python -m videotagger [command] [args]")
+        print("Usage: python -m videotagger [command] [args] [--debug]")
         print("\nCommands:")
         print("  tui                   Launch interactive TUI (default)")
         print("  validate-config       Validate configuration and display status")
         print("  process <video_path>  Process a video and extract tags")
+        print("\nOptions:")
+        print("  --debug, -d           Enable debug logging")
         sys.exit(0)
     else:
         print(f"Unknown command: {command}")

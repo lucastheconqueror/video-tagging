@@ -1,12 +1,15 @@
 """Video processing for frame extraction."""
 
 import base64
+import logging
 from pathlib import Path
 
 import cv2
 import numpy as np
 
 from videotagger.exceptions import VideoProcessingError
+
+logger = logging.getLogger(__name__)
 
 
 def extract_frames(video_path: str | Path, num_frames: int = 8) -> list[np.ndarray]:
@@ -23,19 +26,31 @@ def extract_frames(video_path: str | Path, num_frames: int = 8) -> list[np.ndarr
         VideoProcessingError: If video cannot be opened or read.
     """
     video_path = Path(video_path)
+    logger.info(f"Extracting {num_frames} frames from: {video_path}")
 
     if not video_path.exists():
+        logger.error(f"Video file not found: {video_path}")
         raise VideoProcessingError(f"Video file not found: {video_path}", str(video_path))
 
     cap = cv2.VideoCapture(str(video_path))
 
     if not cap.isOpened():
+        logger.error(f"Could not open video: {video_path}")
         raise VideoProcessingError(f"Could not open video: {video_path}", str(video_path))
 
     try:
         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        duration = total_frames / fps if fps > 0 else 0
+
+        logger.info(
+            f"Video info: {total_frames} frames, {fps:.1f} fps, {width}x{height}, {duration:.1f}s"
+        )
 
         if total_frames < 1:
+            logger.error(f"Video has no frames: {video_path}")
             raise VideoProcessingError(f"Video has no frames: {video_path}", str(video_path))
 
         # Calculate frame indices to extract (evenly spaced)
@@ -56,11 +71,13 @@ def extract_frames(video_path: str | Path, num_frames: int = 8) -> list[np.ndarr
             frames.append(frame)
 
         if not frames:
+            logger.error(f"Could not extract any frames from video: {video_path}")
             raise VideoProcessingError(
                 f"Could not extract any frames from video: {video_path}",
                 str(video_path),
             )
 
+        logger.info(f"Successfully extracted {len(frames)} frames")
         return frames
 
     finally:

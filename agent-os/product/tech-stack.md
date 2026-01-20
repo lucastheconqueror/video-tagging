@@ -72,9 +72,9 @@ RUNPOD_S3_SECRET_KEY=<secret>
 
 # RunPod SSH
 RUNPOD_SSH_HOST=ssh.runpod.io
-RUNPOD_SSH_USER=azvih68libdpx4-644111ea
+RUNPOD_SSH_USER=b0jzswbowem8i8-644118d5
 RUNPOD_SSH_KEY_PATH=~/.ssh/id_ed25519
-RUNPOD_POD_ID=azvih68libdpx4
+RUNPOD_POD_ID=b0jzswbowem8i8
 ```
 
 ## Testing & Quality

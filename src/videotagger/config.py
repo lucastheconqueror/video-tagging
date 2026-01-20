@@ -74,7 +74,7 @@ class LLMConfig(BaseSettings):
         description="vLLM OpenAI-compatible API endpoint",
     )
     model: str = Field(
-        default="Qwen/Qwen2.5-VL-7B-Instruct",
+        default="Qwen/Qwen3-VL-4B-Instruct",
         description="Model name for vision-language analysis",
     )
     api_key: str = Field(
