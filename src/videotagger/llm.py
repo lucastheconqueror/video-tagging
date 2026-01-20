@@ -25,15 +25,16 @@ USER_PROMPT = """Analyze this video for tagging. Output ONLY valid JSON.
 Required fields:
 1. "setting": Physical location (e.g., "Bedroom", "Gym").
 2. "branded_items": List objects with visible branding. Format: [{"name": "Brand", "type": "product/app/franchise"}]
-3. "copyright_markers": {"trademarked_characters": [], "brand_names": [], "urls_visible": []}
-4. "key_text": List 3-5 most important text phrases (ignore full sentences).
-5. "content_type": "promotional", "tutorial", "vlog", "review", or "entertainment".
-6. "copyright_risk": "High" (trademarked IP), "Medium" (brand mentions), or "Low" (none).
+3. "copyright_markers": {"trademarked_characters": [], "brand_names": []}
+4. "cta": List any URLs, codes, or instructions displayed (e.g., "Link in bio", "theconqueror.com/tomb").
+5. "key_text": List 3-5 most important text phrases (ignore full sentences).
+6. "content_type": "promotional", "tutorial", "vlog", "review", or "entertainment".
+7. "copyright_risk": "High" (trademarked IP), "Medium" (brand mentions), or "Low" (none).
 
 Rules:
 - For "trademarked_characters", list recognizable fictional characters (e.g., "Mario", "Spiderman").
-- For "brand_names", list companies/franchises visible via text or logo.
-- For "key_text", extract only nouns/phrases that describe the value prop (e.g., "medals", "virtual challenge")."""
+- For "cta", find explicit calls to action or websites.
+- For "key_text", extract only nouns/phrases that describe the value prop."""
 
 
 def get_llm_client(config: LLMConfig | None = None) -> OpenAI:
@@ -111,14 +112,14 @@ def parse_tags_response(response_text: str) -> dict[str, Any]:
         raise LLMError(f"Failed to parse LLM response as JSON: {e}", e) from e
 
     # Validate required fields
-    required_fields = ["setting", "branded_items", "copyright_markers", "key_text", "content_type", "copyright_risk"]
+    required_fields = ["setting", "branded_items", "copyright_markers", "cta", "key_text", "content_type", "copyright_risk"]
     missing = [f for f in required_fields if f not in data]
 
     if missing:
         raise LLMError(f"LLM response missing required fields: {missing}")
 
     # Ensure list fields are lists
-    for field in ["branded_items", "key_text"]:
+    for field in ["branded_items", "cta", "key_text"]:
         if not isinstance(data[field], list):
             data[field] = [data[field]] if data[field] else []
 
@@ -126,12 +127,11 @@ def parse_tags_response(response_text: str) -> dict[str, Any]:
     if not isinstance(data["copyright_markers"], dict):
         data["copyright_markers"] = {
             "trademarked_characters": [],
-            "brand_names": [],
-            "urls_visible": []
+            "brand_names": []
         }
     else:
         # Ensure sub-fields are lists
-        for subfield in ["trademarked_characters", "brand_names", "urls_visible"]:
+        for subfield in ["trademarked_characters", "brand_names"]:
             if subfield not in data["copyright_markers"]:
                 data["copyright_markers"][subfield] = []
             elif not isinstance(data["copyright_markers"][subfield], list):
