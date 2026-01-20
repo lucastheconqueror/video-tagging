@@ -3,5 +3,11 @@
 from videotagger.tui.screens.json_preview import JSONPreviewScreen
 from videotagger.tui.screens.local_video import LocalVideoScreen
 from videotagger.tui.screens.main_menu import MainMenuScreen
+from videotagger.tui.screens.synology_browser import SynologyBrowserScreen
 
-__all__ = ["MainMenuScreen", "LocalVideoScreen", "JSONPreviewScreen"]
+__all__ = [
+    "MainMenuScreen",
+    "LocalVideoScreen",
+    "JSONPreviewScreen",
+    "SynologyBrowserScreen",
+]

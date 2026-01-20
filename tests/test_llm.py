@@ -46,34 +46,38 @@ class TestParseTagsResponse:
     def test_parses_valid_json(self) -> None:
         """Test parsing of valid JSON response."""
         response = """{
-            "location": "Gym",
-            "brand_objects": ["Nike Shoes"],
-            "visual_text": ["PUSH HARDER"],
-            "mood": "Energetic",
-            "excitement": "High"
+            "setting": "Gym",
+            "branded_items": [{"name": "Nike", "type": "product"}],
+            "copyright_markers": {"trademarked_characters": [], "brand_names": []},
+            "cta": ["Visit our website"],
+            "key_text": ["fitness tips", "workout routine"],
+            "content_type": "tutorial",
+            "copyright_risk": "Low"
         }"""
 
         result = parse_tags_response(response)
 
-        assert result["location"] == "Gym"
-        assert result["mood"] == "Energetic"
-        assert "Nike Shoes" in result["brand_objects"]
+        assert result["setting"] == "Gym"
+        assert result["content_type"] == "tutorial"
+        assert len(result["branded_items"]) == 1
 
     def test_handles_markdown_code_block(self) -> None:
         """Test that markdown code blocks are stripped."""
         response = """```json
 {
-    "location": "Office",
-    "brand_objects": [],
-    "visual_text": [],
-    "mood": "Calm",
-    "excitement": "Low"
+    "setting": "Office",
+    "branded_items": [],
+    "copyright_markers": {"trademarked_characters": [], "brand_names": []},
+    "cta": [],
+    "key_text": ["productivity"],
+    "content_type": "vlog",
+    "copyright_risk": "Low"
 }
 ```"""
 
         result = parse_tags_response(response)
 
-        assert result["location"] == "Office"
+        assert result["setting"] == "Office"
 
     def test_raises_error_for_invalid_json(self) -> None:
         """Test that invalid JSON raises LLMError."""
@@ -84,7 +88,7 @@ class TestParseTagsResponse:
 
     def test_raises_error_for_missing_fields(self) -> None:
         """Test that missing required fields raises LLMError."""
-        response = '{"location": "Gym"}'  # Missing other fields
+        response = '{"setting": "Gym"}'  # Missing other fields
 
         with pytest.raises(LLMError) as exc_info:
             parse_tags_response(response)
@@ -94,17 +98,20 @@ class TestParseTagsResponse:
     def test_converts_non_list_to_list(self) -> None:
         """Test that non-list values are converted to lists."""
         response = """{
-            "location": "Street",
-            "brand_objects": "Single Brand",
-            "visual_text": "Single Text",
-            "mood": "Chill",
-            "excitement": "Low"
+            "setting": "Street",
+            "branded_items": "Single Brand",
+            "copyright_markers": {"trademarked_characters": [], "brand_names": []},
+            "cta": "Check this out",
+            "key_text": "single phrase",
+            "content_type": "entertainment",
+            "copyright_risk": "Low"
         }"""
 
         result = parse_tags_response(response)
 
-        assert isinstance(result["brand_objects"], list)
-        assert result["brand_objects"] == ["Single Brand"]
+        assert isinstance(result["branded_items"], list)
+        assert isinstance(result["cta"], list)
+        assert isinstance(result["key_text"], list)
 
 
 class TestAnalyzeFrames:
@@ -117,11 +124,13 @@ class TestAnalyzeFrames:
             MagicMock(
                 message=MagicMock(
                     content="""{
-                        "location": "Test",
-                        "brand_objects": [],
-                        "visual_text": [],
-                        "mood": "Neutral",
-                        "excitement": "Low"
+                        "setting": "Test Room",
+                        "branded_items": [],
+                        "copyright_markers": {"trademarked_characters": [], "brand_names": []},
+                        "cta": [],
+                        "key_text": ["test content"],
+                        "content_type": "entertainment",
+                        "copyright_risk": "Low"
                     }"""
                 )
             )
@@ -139,5 +148,5 @@ class TestAnalyzeFrames:
 
             result = analyze_frames(["test_frame"], config=mock_config)
 
-            assert result["location"] == "Test"
+            assert result["setting"] == "Test Room"
             mock_client.chat.completions.create.assert_called_once()

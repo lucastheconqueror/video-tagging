@@ -8,7 +8,7 @@
 
 4. [x] **TUI Framework Setup** — Set up Textual-based TUI with main menu, video list view, JSON preview panel, and confirmation dialogs. `M`
 
-5. [ ] **Synology NAS Integration** — Implement SSH/SFTP connection to Synology NAS, list videos matching pattern `V - *a{id}.mp4`, and download selected videos. `S`
+5. [x] **Synology NAS Integration** — Implement SSH/SFTP connection to Synology NAS, list videos matching pattern `V - *a{id}.mp4`, and download selected videos. `S`
 
 6. [ ] **RunPod S3 Sync** — Implement S3 upload to RunPod bucket and verification that files are accessible on the RunPod volume. `S`
 

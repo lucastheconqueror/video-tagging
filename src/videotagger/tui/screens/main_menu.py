@@ -17,6 +17,7 @@ class MainMenuScreen(Screen):
         Binding("enter", "select", "Select", show=True),
         Binding("l", "select", "Select", show=False),
         Binding("p", "process_local", "Process Local", show=True),
+        Binding("s", "browse_synology", "Synology", show=True),
         Binding("v", "validate_config", "Validate Config", show=True),
         Binding("q", "quit", "Quit", show=True),
     ]
@@ -29,13 +30,14 @@ class MainMenuScreen(Screen):
 
             yield OptionList(
                 Option("[p] Process Local Video", id="local-video"),
+                Option("[s] Browse Synology NAS", id="synology"),
                 Option("[v] Validate Configuration", id="validate-config"),
                 Option("[q] Quit", id="quit"),
                 id="menu-list",
             )
 
             yield Static(
-                "Navigate: [j/k] or arrows | Select: [Enter/l] | Direct: [p/v/q]",
+                "Navigate: [j/k] | Select: [Enter] | Direct: [p/s/v/q]",
                 classes="help-text",
             )
 
@@ -67,6 +69,10 @@ class MainMenuScreen(Screen):
         """Direct shortcut to validate config."""
         self._handle_selection("validate-config")
 
+    def action_browse_synology(self) -> None:
+        """Direct shortcut to browse Synology."""
+        self._handle_selection("synology")
+
     def action_quit(self) -> None:
         """Quit the application."""
         self.app.exit()
@@ -81,6 +87,11 @@ class MainMenuScreen(Screen):
             from videotagger.tui.screens.local_video import LocalVideoScreen
 
             self.app.push_screen(LocalVideoScreen())
+
+        elif option_id == "synology":
+            from videotagger.tui.screens.synology_browser import SynologyBrowserScreen
+
+            self.app.push_screen(SynologyBrowserScreen())
 
         elif option_id == "validate-config":
             self._validate_config()

@@ -8,6 +8,8 @@ from textual.containers import Container
 from textual.screen import Screen
 from textual.widgets import Input, LoadingIndicator, Static
 
+from videotagger.sidecar import get_sidecar_info, has_sidecar
+
 
 class LocalVideoScreen(Screen):
     """Screen for processing a local video file."""
@@ -69,8 +71,66 @@ class LocalVideoScreen(Screen):
             self.app.notify("Unsupported video format", severity="warning")
             return
 
-        # Show processing screen
-        self.app.push_screen(ProcessingScreen(str(path)))
+        # Check for existing sidecar
+        if has_sidecar(path):
+            self.app.push_screen(SidecarWarningScreen(str(path)))
+        else:
+            self.app.push_screen(ProcessingScreen(str(path)))
+
+
+class SidecarWarningScreen(Screen):
+    """Warning screen when video has already been processed."""
+
+    BINDINGS = [
+        Binding("y", "proceed", "Proceed & Overwrite", show=True),
+        Binding("n", "cancel", "Cancel", show=True),
+        Binding("v", "view", "View Existing", show=True),
+        Binding("escape", "cancel", "Cancel", show=False),
+    ]
+
+    def __init__(self, video_path: str) -> None:
+        super().__init__()
+        self.video_path = video_path
+
+    def compose(self) -> ComposeResult:
+        """Compose the warning screen."""
+        info = get_sidecar_info(self.video_path) or "Unknown"
+
+        with Container(id="main-container"):
+            yield Static("Video Already Processed", classes="title")
+            yield Static(f"File: {Path(self.video_path).name}", classes="subtitle")
+            yield Static(f"\n{info}\n", classes="help-text")
+            yield Static(
+                "A sidecar JSON file exists for this video.\n"
+                "Processing again will overwrite the existing results.",
+                classes="help-text",
+            )
+            yield Static(
+                "\n[y] Proceed & Overwrite | [n] Cancel | [v] View Existing JSON",
+                classes="help-text",
+            )
+
+    def action_proceed(self) -> None:
+        """Proceed with processing."""
+        self.app.switch_screen(ProcessingScreen(self.video_path))
+
+    def action_cancel(self) -> None:
+        """Cancel and go back."""
+        self.app.pop_screen()
+
+    def action_view(self) -> None:
+        """View existing sidecar data."""
+        from videotagger.sidecar import read_sidecar
+
+        data = read_sidecar(self.video_path)
+        if data and "tags" in data:
+            from videotagger.tui.screens.json_preview import JSONPreviewScreen
+
+            self.app.push_screen(
+                JSONPreviewScreen(self.video_path, data["tags"], from_sidecar=True)
+            )
+        else:
+            self.app.notify("Could not read existing sidecar", severity="error")
 
 
 class ProcessingScreen(Screen):

@@ -43,3 +43,19 @@ class LLMError(VideoTaggerError):
     def __init__(self, message: str, original_error: Exception | None = None) -> None:
         self.original_error = original_error
         super().__init__(message)
+
+
+class SynologyConnectionError(VideoTaggerError):
+    """Raised when connection to Synology NAS fails."""
+
+    def __init__(self, message: str, original_error: Exception | None = None) -> None:
+        self.original_error = original_error
+        super().__init__(message)
+
+
+class SynologyFileError(VideoTaggerError):
+    """Raised when file operations on Synology fail."""
+
+    def __init__(self, message: str, path: str | None = None) -> None:
+        self.path = path
+        super().__init__(message)

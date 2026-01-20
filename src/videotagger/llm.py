@@ -112,7 +112,14 @@ def parse_tags_response(response_text: str) -> dict[str, Any]:
         raise LLMError(f"Failed to parse LLM response as JSON: {e}", e) from e
 
     # Validate required fields
-    required_fields = ["setting", "branded_items", "cta", "key_text", "content_type", "copyright_risk"]
+    required_fields = [
+        "setting",
+        "branded_items",
+        "cta",
+        "key_text",
+        "content_type",
+        "copyright_risk",
+    ]
     missing = [f for f in required_fields if f not in data]
 
     if missing:
@@ -125,15 +132,9 @@ def parse_tags_response(response_text: str) -> dict[str, Any]:
 
     # Handle copyright_markers - ensure it exists and is a dict
     if "copyright_markers" not in data:
-        data["copyright_markers"] = {
-            "trademarked_characters": [],
-            "brand_names": []
-        }
+        data["copyright_markers"] = {"trademarked_characters": [], "brand_names": []}
     elif not isinstance(data["copyright_markers"], dict):
-        data["copyright_markers"] = {
-            "trademarked_characters": [],
-            "brand_names": []
-        }
+        data["copyright_markers"] = {"trademarked_characters": [], "brand_names": []}
     else:
         # Ensure sub-fields are lists
         for subfield in ["trademarked_characters", "brand_names"]:
@@ -142,10 +143,11 @@ def parse_tags_response(response_text: str) -> dict[str, Any]:
             elif not isinstance(data["copyright_markers"][subfield], list):
                 data["copyright_markers"][subfield] = []
 
-    # Remove copyright_markers if copyright_risk is not High
+    # Remove copyright_markers and copyright_risk if risk is not High
     risk = data.get("copyright_risk", "").lower()
     if risk != "high":
         data.pop("copyright_markers", None)
+        data.pop("copyright_risk", None)
 
     return data
 
