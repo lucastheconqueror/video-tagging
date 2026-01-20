@@ -26,15 +26,15 @@ Required fields:
 1. "setting": Physical location (e.g., "Bedroom", "Gym").
 2. "branded_items": List objects with visible branding. Format: [{"name": "Brand", "type": "product/app/franchise"}]
 3. "copyright_markers": {"trademarked_characters": [], "brand_names": []}
-4. "cta": List any URLs, codes, or instructions displayed (e.g., "Link in bio", "theconqueror.com/tomb").
-5. "key_text": List 3-5 most important text phrases (ignore full sentences).
+4. "cta": List any URLs, codes, or action instructions visible on screen.
+5. "key_text": Extract 3-5 short phrases (2-4 words) that represent the main value propositions, product features, or tangible items shown. Focus on what makes the content unique or valuable - include both physical objects and benefit statements.
 6. "content_type": "promotional", "tutorial", "vlog", "review", or "entertainment".
 7. "copyright_risk": "High" (trademarked IP), "Medium" (brand mentions), or "Low" (none).
 
 Rules:
-- For "trademarked_characters", list recognizable fictional characters (e.g., "Mario", "Spiderman").
-- For "cta", find explicit calls to action or websites.
-- For "key_text", extract only nouns/phrases that describe the value prop."""
+- For "trademarked_characters", identify any fictional characters visible or mentioned by name - from video games, movies, TV shows, comics, or other franchises. Look for character names in text overlays and visual appearances.
+- For "cta", capture explicit calls to action, website URLs, or promotional codes.
+- For "key_text", balance concrete nouns with benefit-driven phrases. Keep phrases concise and machine-learning friendly."""
 
 
 def get_llm_client(config: LLMConfig | None = None) -> OpenAI:
@@ -112,7 +112,7 @@ def parse_tags_response(response_text: str) -> dict[str, Any]:
         raise LLMError(f"Failed to parse LLM response as JSON: {e}", e) from e
 
     # Validate required fields
-    required_fields = ["setting", "branded_items", "copyright_markers", "cta", "key_text", "content_type", "copyright_risk"]
+    required_fields = ["setting", "branded_items", "cta", "key_text", "content_type", "copyright_risk"]
     missing = [f for f in required_fields if f not in data]
 
     if missing:
@@ -123,8 +123,13 @@ def parse_tags_response(response_text: str) -> dict[str, Any]:
         if not isinstance(data[field], list):
             data[field] = [data[field]] if data[field] else []
 
-    # Ensure copyright_markers is a dict with required keys
-    if not isinstance(data["copyright_markers"], dict):
+    # Handle copyright_markers - ensure it exists and is a dict
+    if "copyright_markers" not in data:
+        data["copyright_markers"] = {
+            "trademarked_characters": [],
+            "brand_names": []
+        }
+    elif not isinstance(data["copyright_markers"], dict):
         data["copyright_markers"] = {
             "trademarked_characters": [],
             "brand_names": []
@@ -136,6 +141,11 @@ def parse_tags_response(response_text: str) -> dict[str, Any]:
                 data["copyright_markers"][subfield] = []
             elif not isinstance(data["copyright_markers"][subfield], list):
                 data["copyright_markers"][subfield] = []
+
+    # Remove copyright_markers if copyright_risk is not High
+    risk = data.get("copyright_risk", "").lower()
+    if risk != "high":
+        data.pop("copyright_markers", None)
 
     return data
 
