@@ -1,6 +1,7 @@
 """RunPod remote video processing.
 
 Processes videos that are stored on RunPod S3/network volume using the GPU pod.
+Combines vision analysis (Qwen3-VL) with local audio analysis pipeline.
 """
 
 import logging
@@ -66,26 +67,25 @@ def list_remote_videos(prefix: str = "videos/") -> list[RemoteVideo]:
     return videos
 
 
-def process_remote_video(video: RemoteVideo | str) -> dict:
+def process_remote_video(video: RemoteVideo | str, include_audio: bool = True) -> dict:
     """Process a video stored on RunPod S3.
 
-    Since vLLM runs on the same pod that has the S3 volume mounted,
-    we can read the video directly from the mounted path.
+    Combines:
+    1. Vision analysis via Qwen3-VL on RunPod (frames → visual tags)
+    2. Audio analysis locally (voice detection, mood, music genre)
 
-    However, the current vLLM endpoint expects base64 frames, not file paths.
-    So we need to either:
-    1. Download the video locally, extract frames, send to vLLM (current approach)
-    2. Have a custom endpoint on RunPod that reads from disk
-
-    For now, we use approach 1 with the HTTP endpoint.
+    The audio pipeline runs entirely on local CPU while waiting for
+    the vision model response, maximizing efficiency.
 
     Args:
         video: RemoteVideo object or S3 key string.
+        include_audio: Whether to run audio analysis (default True).
 
     Returns:
-        Extracted tags dict.
+        Merged tags dict with both vision and audio analysis.
     """
     import tempfile
+    from concurrent.futures import ThreadPoolExecutor, as_completed
 
     import boto3
 
@@ -96,8 +96,10 @@ def process_remote_video(video: RemoteVideo | str) -> dict:
         key = video.key
         filename = video.filename
 
-    config = get_settings().runpod_s3
-    llm_config = get_settings().llm
+    settings = get_settings()
+    config = settings.runpod_s3
+    llm_config = settings.llm
+    audio_config = settings.audio
 
     logger.info(f"Processing remote video: {filename}")
 
@@ -116,13 +118,66 @@ def process_remote_video(video: RemoteVideo | str) -> dict:
         )
         client.download_file(config.bucket, key, str(tmp_path))
 
-        # Extract frames
-        logger.debug(f"Extracting {llm_config.frame_count} frames")
-        frames = extract_frames_as_base64(str(tmp_path), num_frames=llm_config.frame_count)
+        # Run vision and audio analysis in parallel
+        vision_result = None
+        audio_result = None
+        errors = []
 
-        # Analyze with LLM
-        logger.debug("Analyzing with vLLM")
-        tags = analyze_frames(frames)
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            futures = {}
+
+            # Submit vision analysis (sends frames to RunPod vLLM)
+            def run_vision():
+                # Get dynamic endpoint from RunPod API
+                from videotagger.runpod_api import ensure_pod_running
+
+                success, message, vllm_endpoint = ensure_pod_running()
+                if not success or not vllm_endpoint:
+                    raise RuntimeError(f"Pod not ready: {message}")
+
+                logger.info(f"Using vLLM endpoint: {vllm_endpoint}")
+                logger.debug(f"Extracting {llm_config.frame_count} frames")
+                frames = extract_frames_as_base64(
+                    str(tmp_path), 
+                    num_frames=llm_config.frame_count,
+                    max_size=llm_config.frame_max_size,
+                )
+                logger.debug("Analyzing with vLLM")
+                return analyze_frames(frames, endpoint_override=vllm_endpoint)
+
+            futures[executor.submit(run_vision)] = "vision"
+
+            # Submit audio analysis (runs locally on CPU)
+            if include_audio and audio_config.enabled:
+
+                def run_audio():
+                    from videotagger.audio_analysis import analyze_video_audio
+
+                    logger.debug("Running local audio analysis")
+                    return analyze_video_audio(tmp_path)
+
+                futures[executor.submit(run_audio)] = "audio"
+
+            # Collect results
+            for future in as_completed(futures):
+                task_name = futures[future]
+                try:
+                    if task_name == "vision":
+                        vision_result = future.result()
+                    elif task_name == "audio":
+                        audio_result = future.result()
+                except Exception as e:
+                    logger.error(f"{task_name} analysis failed: {e}")
+                    errors.append(f"{task_name}: {e}")
+
+        # Merge results
+        tags = vision_result or {}
+
+        if audio_result:
+            tags["audio_analysis"] = audio_result.to_dict()
+        elif include_audio and audio_config.enabled:
+            # Audio was requested but failed
+            tags["audio_analysis"] = {"error": "Audio analysis failed", "errors": errors}
 
         logger.info(f"Processed: {filename}")
         return tags

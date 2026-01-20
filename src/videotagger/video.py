@@ -84,12 +84,13 @@ def extract_frames(video_path: str | Path, num_frames: int = 8) -> list[np.ndarr
         cap.release()
 
 
-def frame_to_base64(frame: np.ndarray, format: str = "jpg") -> str:
+def frame_to_base64(frame: np.ndarray, format: str = "jpg", max_size: int = 512) -> str:
     """Convert a frame to base64-encoded string.
 
     Args:
         frame: Frame as numpy array (BGR format from OpenCV).
         format: Image format for encoding ('jpg' or 'png').
+        max_size: Maximum dimension (width or height) in pixels. Larger images are downsampled.
 
     Returns:
         Base64-encoded string of the image.
@@ -97,6 +98,15 @@ def frame_to_base64(frame: np.ndarray, format: str = "jpg") -> str:
     Raises:
         VideoProcessingError: If encoding fails.
     """
+    # Downsample if needed to reduce token usage
+    height, width = frame.shape[:2]
+    if max(height, width) > max_size:
+        scale = max_size / max(height, width)
+        new_width = int(width * scale)
+        new_height = int(height * scale)
+        frame = cv2.resize(frame, (new_width, new_height), interpolation=cv2.INTER_AREA)
+        logger.debug(f"Downsampled frame from {width}x{height} to {new_width}x{new_height}")
+
     if format.lower() == "jpg":
         ext = ".jpg"
         params = [cv2.IMWRITE_JPEG_QUALITY, 85]
@@ -115,12 +125,14 @@ def frame_to_base64(frame: np.ndarray, format: str = "jpg") -> str:
 def extract_frames_as_base64(
     video_path: str | Path,
     num_frames: int = 8,
+    max_size: int = 512,
 ) -> list[str]:
     """Extract frames from video and return as base64-encoded strings.
 
     Args:
         video_path: Path to the video file.
         num_frames: Number of frames to extract.
+        max_size: Maximum dimension for frames (default 512px to fit in 16K context).
 
     Returns:
         List of base64-encoded JPEG images.
@@ -129,4 +141,4 @@ def extract_frames_as_base64(
         VideoProcessingError: If extraction or encoding fails.
     """
     frames = extract_frames(video_path, num_frames)
-    return [frame_to_base64(frame) for frame in frames]
+    return [frame_to_base64(frame, max_size=max_size) for frame in frames]

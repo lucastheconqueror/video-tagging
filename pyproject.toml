@@ -19,6 +19,20 @@ dev = [
     "ruff>=0.1.0",
     "pytest>=7.0.0",
 ]
+audio = [
+    # Audio processing
+    "librosa>=0.10.0",
+    "scipy>=1.10.0",
+    "praat-parselmouth>=0.4.0",
+    # ML models
+    "torch>=2.0.0",
+    "torchaudio>=2.0.0",
+    "transformers>=4.30.0",
+    # Silero VAD loaded via torch.hub
+]
+all = [
+    "videotagger[audio]",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]

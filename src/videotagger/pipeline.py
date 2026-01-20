@@ -34,7 +34,11 @@ def process_video(
         config = get_settings().llm
 
     # Extract frames as base64
-    frames = extract_frames_as_base64(video_path, config.frame_count)
+    frames = extract_frames_as_base64(
+        video_path, 
+        num_frames=config.frame_count,
+        max_size=config.frame_max_size,
+    )
 
     # Analyze with LLM
     tags = analyze_frames(frames, config)

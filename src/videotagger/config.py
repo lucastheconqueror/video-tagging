@@ -43,19 +43,24 @@ class RunPodS3Config(BaseSettings):
 
 
 class RunPodSSHConfig(BaseSettings):
-    """RunPod SSH connection credentials."""
+    """RunPod SSH connection credentials (deprecated - use API instead)."""
 
     model_config = SettingsConfigDict(env_prefix="RUNPOD_SSH_")
 
-    host: str = Field(..., description="SSH host (e.g., ssh.runpod.io)")
-    user: str = Field(..., description="SSH username")
-    key_path: Path = Field(..., description="Path to SSH private key")
-    pod_id: str = Field(..., description="RunPod pod ID")
+    host: str = Field(default="", description="SSH host (deprecated)")
+    user: str = Field(default="", description="SSH username (deprecated)")
+    key_path: Path | None = Field(default=None, description="Path to SSH private key (deprecated)")
+    pod_id: str = Field(
+        default="",
+        description="Preferred pod ID (optional - will auto-detect if not set)",
+    )
 
     @field_validator("key_path", mode="before")
     @classmethod
-    def expand_and_validate_path(cls, v: str | Path) -> Path:
+    def expand_and_validate_path(cls, v: str | Path | None) -> Path | None:
         """Expand ~ in path and validate the file exists."""
+        if v is None or v == "":
+            return None
         path = Path(v).expanduser()
         if not path.exists():
             raise ValueError(f"SSH key file not found: {path}")
@@ -95,6 +100,38 @@ class LLMConfig(BaseSettings):
         ge=1,
         le=32,
     )
+    frame_max_size: int = Field(
+        default=512,
+        description="Maximum frame dimension in pixels (reduces context usage)",
+        ge=256,
+        le=1920,
+    )
+
+
+class AudioConfig(BaseSettings):
+    """Audio analysis pipeline configuration."""
+
+    model_config = SettingsConfigDict(env_prefix="AUDIO_")
+
+    enabled: bool = Field(
+        default=True,
+        description="Enable audio analysis pipeline",
+    )
+    vad_threshold: float = Field(
+        default=0.5,
+        description="Voice activity detection probability threshold",
+        ge=0.0,
+        le=1.0,
+    )
+    min_speech_duration_ms: int = Field(
+        default=250,
+        description="Minimum speech segment duration in milliseconds",
+        ge=50,
+    )
+    sample_rate: int = Field(
+        default=16000,
+        description="Audio sample rate for processing (16kHz optimal for speech)",
+    )
 
 
 class Settings(BaseSettings):
@@ -112,6 +149,7 @@ class Settings(BaseSettings):
     runpod_ssh: RunPodSSHConfig = Field(default_factory=RunPodSSHConfig)
     runpod_api: RunPodAPIConfig = Field(default_factory=RunPodAPIConfig)
     llm: LLMConfig = Field(default_factory=LLMConfig)
+    audio: AudioConfig = Field(default_factory=AudioConfig)
 
 
 @lru_cache

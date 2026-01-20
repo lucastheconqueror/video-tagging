@@ -37,11 +37,12 @@ Rules:
 - For "key_text", balance concrete nouns with benefit-driven phrases. Keep phrases concise and machine-learning friendly."""
 
 
-def get_llm_client(config: LLMConfig | None = None) -> OpenAI:
+def get_llm_client(config: LLMConfig | None = None, endpoint_override: str | None = None) -> OpenAI:
     """Get configured OpenAI client for vLLM.
 
     Args:
         config: Optional LLMConfig. If None, loads from Settings.
+        endpoint_override: Optional endpoint URL to override config (for dynamic RunPod URLs).
 
     Returns:
         Configured OpenAI client.
@@ -49,8 +50,10 @@ def get_llm_client(config: LLMConfig | None = None) -> OpenAI:
     if config is None:
         config = get_settings().llm
 
+    base_url = endpoint_override or config.endpoint
+
     return OpenAI(
-        base_url=config.endpoint,
+        base_url=base_url,
         api_key=config.api_key,
     )
 
@@ -155,12 +158,14 @@ def parse_tags_response(response_text: str) -> dict[str, Any]:
 def analyze_frames(
     frames_base64: list[str],
     config: LLMConfig | None = None,
+    endpoint_override: str | None = None,
 ) -> dict[str, Any]:
     """Analyze video frames using vision-language model.
 
     Args:
         frames_base64: List of base64-encoded frame images.
         config: Optional LLMConfig. If None, loads from Settings.
+        endpoint_override: Optional endpoint URL to override config (for dynamic RunPod URLs).
 
     Returns:
         Dictionary with extracted tags.
@@ -171,11 +176,12 @@ def analyze_frames(
     if config is None:
         config = get_settings().llm
 
-    logger.info(f"LLM endpoint: {config.endpoint}")
+    endpoint = endpoint_override or config.endpoint
+    logger.info(f"LLM endpoint: {endpoint}")
     logger.info(f"LLM model: {config.model}")
     logger.info(f"Number of frames: {len(frames_base64)}")
 
-    client = get_llm_client(config)
+    client = get_llm_client(config, endpoint_override=endpoint_override)
     messages = build_vision_messages(frames_base64)
 
     logger.debug(f"Sending request to LLM with {len(messages)} messages")

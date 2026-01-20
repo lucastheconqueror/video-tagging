@@ -119,6 +119,69 @@ def run_tui() -> int:
     return 0
 
 
+def analyze_audio_command(video_path: str, debug: bool = False) -> int:
+    """Analyze audio from a local video file.
+
+    Args:
+        video_path: Path to the video file.
+        debug: Enable debug logging.
+
+    Returns:
+        Exit code: 0 for success, 1 for errors.
+    """
+    import json
+    from pathlib import Path
+
+    setup_logging(debug=debug)
+
+    video_path = Path(video_path)
+    if not video_path.exists():
+        print(f"Error: File not found: {video_path}")
+        return 1
+
+    try:
+        from videotagger.audio_analysis import analyze_video_audio
+
+        print(f"Analyzing audio: {video_path.name}")
+        print("Loading models (first run may take a moment)...\n")
+
+        result = analyze_video_audio(video_path)
+
+        print("Audio Analysis Results:")
+        print("-" * 40)
+        print(json.dumps(result.to_dict(), indent=2, ensure_ascii=False))
+
+        # Summary
+        print("-" * 40)
+        if result.voice_detected:
+            print(f"Voice: Detected ({len(result.voice_segments)} segments)")
+            if result.prosody:
+                print(f"Style: {result.prosody.voiceover_style}")
+                print(f"  Tempo: {result.prosody.tempo_bpm:.0f} BPM")
+                print(f"  Pitch: {result.prosody.mean_pitch_hz:.0f} Hz (±{result.prosody.pitch_variation_hz:.0f})")
+                print(f"  Energy: {result.prosody.energy_level:.4f}")
+        else:
+            print("Voice: Not detected")
+        print(f"Genre: {result.music_genre} ({result.music_genre_confidence:.0%})")
+        print(f"Time: {result.processing_time_ms:.0f}ms")
+
+        return 0
+
+    except ImportError as e:
+        print(f"Missing dependencies: {e}")
+        print("\nInstall audio dependencies with:")
+        print("  pip install -e '.[audio]'")
+        return 1
+
+    except Exception as e:
+        print(f"Error: {e}")
+        if debug:
+            import traceback
+
+            traceback.print_exc()
+        return 1
+
+
 def main() -> None:
     """Main CLI entry point."""
     # Check for debug flag
@@ -140,18 +203,24 @@ def main() -> None:
             print("Usage: python -m videotagger process <video_path> [--debug]")
             sys.exit(1)
         sys.exit(process_video_command(args[1], debug=debug))
+    elif command == "audio":
+        if len(args) < 2:
+            print("Usage: python -m videotagger audio <video_path> [--debug]")
+            sys.exit(1)
+        sys.exit(analyze_audio_command(args[1], debug=debug))
     elif command in ["--help", "-h"]:
         print("Usage: python -m videotagger [command] [args] [--debug]")
         print("\nCommands:")
         print("  tui                   Launch interactive TUI (default)")
         print("  validate-config       Validate configuration and display status")
-        print("  process <video_path>  Process a video and extract tags")
+        print("  process <video_path>  Process a video and extract tags (vision + audio)")
+        print("  audio <video_path>    Analyze audio only (local, no GPU needed)")
         print("\nOptions:")
         print("  --debug, -d           Enable debug logging")
         sys.exit(0)
     else:
         print(f"Unknown command: {command}")
-        print("Available commands: tui, validate-config, process")
+        print("Available commands: tui, validate-config, process, audio")
         print("Run with --help for more information")
         sys.exit(1)
 

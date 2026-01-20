@@ -18,7 +18,10 @@
 
 9. [x] **Batch Processing & Progress** — Add progress bars, batch video processing, error handling with retry, and summary report at completion. `S`
 
+10. [x] **Composite Audio Tagging Pipeline** — Multi-model audio analysis with voice detection (Silero VAD), mood classification (Wav2Vec2-XLSR-Emotion), and music genre detection (EfficientNet-B0 on spectrograms). Uses conditional execution to skip emotion inference on non-speech audio. `L`
+
 > Notes
 > - Items 1-4 form the MVP for local testing
 > - Items 5-7 add production infrastructure
-> - Item 8-9 complete the full pipeline with UX polish
+> - Items 8-9 complete the full pipeline with UX polish
+> - Item 10 extends tagging to audio modality
