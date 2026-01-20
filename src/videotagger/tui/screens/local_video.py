@@ -33,7 +33,7 @@ class LocalVideoScreen(Screen):
                 )
 
             yield Static(
-                "[Enter] Process | [Escape] Back | Supports: .mp4 .mov .avi .mkv",
+                "Enter Process | Esc Back | Supports: .mp4 .mov .avi .mkv",
                 classes="help-text",
             )
 
@@ -106,7 +106,7 @@ class SidecarWarningScreen(Screen):
                 classes="help-text",
             )
             yield Static(
-                "\n[y] Proceed & Overwrite | [n] Cancel | [v] View Existing JSON",
+                "\ny Proceed & Overwrite | n Cancel | v View Existing JSON",
                 classes="help-text",
             )
 
@@ -156,7 +156,7 @@ class ProcessingScreen(Screen):
                 id="status-text",
                 classes="help-text",
             )
-            yield Static("[Ctrl+C] Cancel", classes="help-text")
+            yield Static("Ctrl+C Cancel", classes="help-text")
 
     def on_mount(self) -> None:
         """Start processing when screen mounts."""

@@ -57,7 +57,7 @@ class JSONPreviewScreen(Screen):
             yield Static(tags_json, id="json-preview")
 
             yield Static(
-                "[y] Update Airtable | [w] Save Sidecar Only | [n/s] Skip | [Esc] Menu",
+                "y Update Airtable | w Save Sidecar Only | [n/s] Skip | Esc Menu",
                 classes="help-text",
             )
 

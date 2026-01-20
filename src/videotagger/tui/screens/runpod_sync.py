@@ -35,7 +35,7 @@ class RunPodSyncScreen(Screen):
             yield Static(f"{len(self.videos)} videos selected", id="status", classes="subtitle")
             yield OptionList(id="video-list")
             yield Static(
-                "[Space] Toggle | [a] All | [u] Upload | [c] Check S3 | [Esc] Back",
+                "Space Toggle | a All | u Upload | c Check S3 | Esc Back",
                 classes="help-text",
             )
 
@@ -204,7 +204,7 @@ class UploadProgressScreen(Screen):
             yield ProgressBar(total=100, show_eta=True, id="progress-bar")
             yield Static("", id="current-file", classes="help-text")
             yield LoadingIndicator()
-            yield Static("[Ctrl+C] Cancel", classes="help-text")
+            yield Static("Ctrl+C Cancel", classes="help-text")
 
     def on_mount(self) -> None:
         """Start upload."""

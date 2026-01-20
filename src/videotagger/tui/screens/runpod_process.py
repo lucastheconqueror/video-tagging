@@ -34,7 +34,7 @@ class RunPodProcessScreen(Screen):
             yield LoadingIndicator(id="loader")
             yield OptionList(id="video-list")
             yield Static(
-                "[Space] Toggle | [a] All | [Enter] Process | [r] Refresh | [Esc] Back",
+                "Space Toggle | a All | Enter Process | r Refresh | Esc Back",
                 classes="help-text",
             )
 
@@ -179,7 +179,7 @@ class RunPodProcessingScreen(Screen):
             yield ProgressBar(total=100, show_eta=True, id="progress-bar")
             yield Static("", id="current-file", classes="help-text")
             yield LoadingIndicator()
-            yield Static("[Ctrl+C] Cancel", classes="help-text")
+            yield Static("Ctrl+C Cancel", classes="help-text")
 
     def on_mount(self) -> None:
         """Start processing."""
